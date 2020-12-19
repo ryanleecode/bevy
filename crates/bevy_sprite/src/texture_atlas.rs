@@ -52,6 +52,40 @@ impl TextureAtlasSprite {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct PaddingSpecification {
+    pub left: f32,
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+}
+
+impl PaddingSpecification {
+    pub fn new(left: f32, top: f32, right: f32, bottom: f32) -> Self {
+        Self {
+            left,
+            top,
+            right,
+            bottom,
+        }
+    }
+
+    pub fn uniform<T>(value: T) -> Self
+    where
+        T: Into<Vec2>,
+    {
+        let vec2: Vec2 = value.into();
+
+        Self::new(vec2.x, vec2.y, vec2.x, vec2.y)
+    }
+}
+
+impl From<Vec2> for PaddingSpecification {
+    fn from(vec2: Vec2) -> Self {
+        PaddingSpecification::uniform(vec2)
+    }
+}
+
 impl TextureAtlas {
     /// Create a new `TextureAtlas` that has a texture, but does not have
     /// any individual sprites specified
@@ -69,38 +103,40 @@ impl TextureAtlas {
     pub fn from_grid(
         texture: Handle<Texture>,
         tile_size: Vec2,
-        columns: usize,
-        rows: usize,
+        texture_dimensions: Vec2,
     ) -> TextureAtlas {
-        Self::from_grid_with_padding(texture, tile_size, columns, rows, Vec2::new(0f32, 0f32))
+        Self::from_grid_with_padding(
+            texture,
+            tile_size,
+            texture_dimensions,
+            PaddingSpecification::default(),
+        )
     }
 
     /// Generate a `TextureAtlas` by splitting a texture into a grid where each
     /// cell of the grid of `tile_size` is one of the textures in the atlas and is separated by
     /// some `padding` in the texture
-    pub fn from_grid_with_padding(
+    pub fn from_grid_with_padding<PS>(
         texture: Handle<Texture>,
         tile_size: Vec2,
-        columns: usize,
-        rows: usize,
-        padding: Vec2,
-    ) -> TextureAtlas {
+        texture_dimensions: Vec2,
+        padding: PS,
+    ) -> TextureAtlas
+    where
+        PS: Into<PaddingSpecification>,
+    {
+        let padding: PaddingSpecification = padding.into();
         let mut sprites = Vec::new();
-        let mut x_padding = 0.0;
-        let mut y_padding = 0.0;
+        let x_padding = padding.left + padding.right;
+        let y_padding = padding.top + padding.bottom;
+        let rows = (texture_dimensions.x / (tile_size.x + x_padding)) as i32;
+        let columns = (texture_dimensions.y / (tile_size.y + y_padding)) as i32;
 
         for y in 0..rows {
-            if y > 0 {
-                y_padding = padding.y;
-            }
             for x in 0..columns {
-                if x > 0 {
-                    x_padding = padding.x;
-                }
-
                 let rect_min = Vec2::new(
-                    (tile_size.x + x_padding) * x as f32,
-                    (tile_size.y + y_padding) * y as f32,
+                    (tile_size.x + x_padding) * x as f32 + padding.left,
+                    (tile_size.y + y_padding) * y as f32 + padding.top,
                 );
 
                 sprites.push(Rect {
@@ -111,10 +147,7 @@ impl TextureAtlas {
         }
 
         TextureAtlas {
-            size: Vec2::new(
-                ((tile_size.x + x_padding) * columns as f32) - x_padding,
-                ((tile_size.y + y_padding) * rows as f32) - y_padding,
-            ),
+            size: texture_dimensions,
             textures: sprites,
             texture,
             texture_handles: None,
