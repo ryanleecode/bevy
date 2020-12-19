@@ -15,10 +15,6 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/bevyengine/bevy"
 
-[workspace]
-exclude = ["benches"]
-members = ["crates/*", "examples/ios"]
-
 [features]
 default = [
   "bevy_audio",
@@ -382,4 +378,3 @@ icon = "@mipmap/ic_launcher"
 build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
 min_sdk_version = 16
 target_sdk_version = 29
-
